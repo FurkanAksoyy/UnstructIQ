@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from app.utils.file_parser import parse_file, get_dataframe_info
 from app.utils.data_cleaner import clean_dataframe
+from app.services.chart_service import generate_charts
 from app.config import settings
 
 
@@ -15,7 +16,8 @@ def process_file(job_id: str) -> dict:
     2. Parse file
     3. Clean data
     4. Generate statistics
-    5. Save processed data
+    5. Generate charts
+    6. Save processed data
     """
     try:
         # Load metadata
@@ -42,6 +44,9 @@ def process_file(job_id: str) -> dict:
         # Step 3: Generate basic statistics
         statistics = generate_statistics(df_cleaned)
 
+        # Step 4: Generate charts
+        charts = generate_charts(df_cleaned)
+
         # Save processed data
         processed_dir = os.path.join(settings.PROCESSED_DIR, job_id)
         os.makedirs(processed_dir, exist_ok=True)
@@ -58,6 +63,7 @@ def process_file(job_id: str) -> dict:
             "cleaned_data_info": cleaned_info,
             "cleaning_report": cleaning_report,
             "statistics": statistics,
+            "charts": charts,
             "processed_at": datetime.now().isoformat()
         }
 

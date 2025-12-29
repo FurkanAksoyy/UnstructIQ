@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import './App.css'
 import { api } from './services/api'
-import { Upload, X, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, X, FileText, Loader2, CheckCircle, AlertCircle, BarChart3 } from 'lucide-react'
+import ChartDisplay from './components/ChartDisplay'
 
 function App() {
   const [backendStatus, setBackendStatus] = useState<any>(null);
@@ -68,7 +69,7 @@ function App() {
       setLoading(true);
       const result = await api.uploadFile(selectedFile);
       setUploadResult(result);
-      setProcessingResults(null); // Reset previous results
+      setProcessingResults(null);
     } catch (err: any) {
       console.error('Upload error:', err);
       alert('Upload failed: ' + (err.response?.data?.detail || err.message));
@@ -249,6 +250,22 @@ function App() {
                 </div>
               </div>
             </div>
+
+            {/* Charts Section */}
+            {processingResults.charts && processingResults.charts.length > 0 && (
+              <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
+                  <BarChart3 className="w-6 h-6 text-indigo-400" />
+                  Data Visualizations
+                </h3>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {processingResults.charts.map((chart: any, index: number) => (
+                    <ChartDisplay key={index} chartConfig={chart} />
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Cleaning Report */}
             {processingResults.cleaning_report && (
