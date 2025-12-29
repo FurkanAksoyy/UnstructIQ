@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: unstructiq-backend-prod
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - HOST=0.0.0.0
+      - PORT=8000
+      - UPLOAD_DIR=/app/uploads
+      - PROCESSED_DIR=/app/processed
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost}
+    volumes:
+      - backend-uploads:/app/uploads
+      - backend-processed:/app/processed
+    networks:
+      - unstructiq-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: unstructiq-frontend-prod
+    depends_on:
+      - backend
+    networks:
+      - unstructiq-network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    image: nginx:alpine
+    container_name: unstructiq-nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - unstructiq-network
+    restart: always
+
+networks:
+  unstructiq-network:
+    driver: bridge
+
+volumes:
+  backend-uploads:
+  backend-processed:

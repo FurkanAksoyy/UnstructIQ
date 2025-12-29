@@ -365,9 +365,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 
-**Furkan Akkuzu**
-- GitHub: [@furkanakkuzu](https://github.com/furkanakkuzu)
-- LinkedIn: [Furkan Akkuzu](https://linkedin.com/in/furkanakkuzu)
+**Furkan Aksoy**
+- GitHub: [@FurkanAksoyy](https://github.com/FurkanAksoyy)
+- LinkedIn: [Furkan Aksoy](https://www.linkedin.com/in/furkan-aksoy-07a256280/)
 
 ---
 
