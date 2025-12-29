@@ -25,21 +25,37 @@ export const api = {
     return response.data;
   },
 
-  // YENİ: Start processing
+  // Start processing
   processFile: async (jobId) => {
     const response = await axios.post(`${API_BASE_URL}/api/process/${jobId}`);
     return response.data;
   },
 
-  // YENİ: Get status
+  // Get status
   getStatus: async (jobId) => {
     const response = await axios.get(`${API_BASE_URL}/api/status/${jobId}`);
     return response.data;
   },
 
-  // YENİ: Get results
+  // Get results
   getResults: async (jobId) => {
     const response = await axios.get(`${API_BASE_URL}/api/results/${jobId}`);
+    return response.data;
+  },
+
+  // Export cleaned CSV
+  exportCSV: async (jobId) => {
+    const response = await axios.get(`${API_BASE_URL}/api/export/csv/${jobId}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // Export results JSON
+  exportJSON: async (jobId) => {
+    const response = await axios.get(`${API_BASE_URL}/api/export/json/${jobId}`, {
+      responseType: 'blob',
+    });
     return response.data;
   },
 };

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 import { api } from './services/api'
-import { Upload, X, FileText, Loader2, CheckCircle, AlertCircle, BarChart3, Sparkles } from 'lucide-react'
+import { Upload, X, FileText, Loader2, CheckCircle, AlertCircle, BarChart3, Sparkles, Download, Eye, TrendingUp, AlertTriangle } from 'lucide-react'
 import ChartDisplay from './components/ChartDisplay'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -12,7 +12,9 @@ function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [userPrompt, setUserPrompt] = useState<string>('');
   const [processing, setProcessing] = useState(false);
+  const [processingStage, setProcessingStage] = useState<string>('');
   const [processingResults, setProcessingResults] = useState<any>(null);
 
   // Backend connection test
@@ -55,6 +57,7 @@ function App() {
     setSelectedFile(null);
     setUploadResult(null);
     setProcessingResults(null);
+    setUserPrompt('');
   };
 
   const formatFileSize = (bytes: number) => {
@@ -69,7 +72,7 @@ function App() {
 
     try {
       setLoading(true);
-      const result = await api.uploadFile(selectedFile);
+      const result = await api.uploadFile(selectedFile, userPrompt);
       setUploadResult(result);
       setProcessingResults(null);
     } catch (err: any) {
@@ -80,19 +83,78 @@ function App() {
     }
   };
 
-  // Process uploaded file
+  // Process uploaded file with animation
   const handleProcess = async () => {
     if (!uploadResult?.job_id) return;
 
     try {
       setProcessing(true);
+
+      setProcessingStage('Parsing file...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setProcessingStage('Cleaning data...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setProcessingStage('Analyzing statistics...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setProcessingStage('Detecting patterns...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setProcessingStage('Generating visualizations...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      setProcessingStage('AI analyzing patterns...');
+
       const result = await api.processFile(uploadResult.job_id);
       setProcessingResults(result.results);
+      setProcessingStage('');
     } catch (err: any) {
       console.error('Processing error:', err);
       alert('Processing failed: ' + (err.response?.data?.detail || err.message));
+      setProcessingStage('');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Export functions
+  const handleExportCSV = async () => {
+    if (!uploadResult?.job_id) return;
+
+    try {
+      const blob = await api.exportCSV(uploadResult.job_id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cleaned_data_${uploadResult.job_id}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Export CSV error:', err);
+      alert('Export failed');
+    }
+  };
+
+  const handleExportJSON = async () => {
+    if (!uploadResult?.job_id) return;
+
+    try {
+      const blob = await api.exportJSON(uploadResult.job_id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `results_${uploadResult.job_id}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Export JSON error:', err);
+      alert('Export failed');
     }
   };
 
@@ -166,25 +228,42 @@ function App() {
               </div>
 
               {!uploadResult && (
-                <button
-                  onClick={handleUpload}
-                  disabled={loading}
-                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {loading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Uploading...
-                    </span>
-                  ) : (
-                    'Upload File'
-                  )}
-                </button>
+                <>
+                  <div className="bg-slate-700/30 border border-slate-600 rounded-xl p-4">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      💬 Processing Instructions (Optional)
+                    </label>
+                    <textarea
+                      value={userPrompt}
+                      onChange={(e) => setUserPrompt(e.target.value)}
+                      placeholder="e.g., Focus on revenue trends, Analyze customer segments, Look for anomalies in sales data..."
+                      className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                      rows={3}
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      💡 Provide specific instructions to guide the AI analysis
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleUpload}
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Uploading...
+                      </span>
+                    ) : (
+                      '📤 Upload & Analyze'
+                    )}
+                  </button>
+                </>
               )}
             </div>
           )}
 
-          {/* Upload Success + Process Button */}
           {uploadResult && !processingResults && (
             <div className="mt-6 space-y-4">
               <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
@@ -195,6 +274,11 @@ function App() {
                 <p className="text-sm text-green-300/70 mt-1">
                   Job ID: {uploadResult.job_id}
                 </p>
+                {userPrompt && (
+                  <p className="text-sm text-gray-400 mt-2">
+                    📝 Instructions: {userPrompt}
+                  </p>
+                )}
               </div>
 
               <button
@@ -203,10 +287,17 @@ function App() {
                 className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {processing ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Processing Data...
-                  </span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processing Data...
+                    </div>
+                    {processingStage && (
+                      <div className="text-sm text-green-200">
+                        {processingStage}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   '🚀 Process Data'
                 )}
@@ -230,7 +321,7 @@ function App() {
             </div>
 
             {/* Data Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
                 <div className="text-gray-400 text-sm mb-2">Total Rows</div>
                 <div className="text-3xl font-bold text-white">
@@ -251,9 +342,212 @@ function App() {
                   {processingResults.cleaning_report?.rows_removed || 0}
                 </div>
               </div>
+
+              <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+                <div className="text-gray-400 text-sm mb-2">Outliers Found</div>
+                <div className="text-3xl font-bold text-white">
+                  {Object.keys(processingResults.advanced_analytics?.outliers || {}).length}
+                </div>
+              </div>
             </div>
 
-            {/* AI Insights Section - NEW DESIGN */}
+            {/* Data Preview */}
+            {processingResults.data_preview && (
+              <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-indigo-400" />
+                  Data Preview (First 10 Rows)
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-gray-400 uppercase bg-slate-700/50">
+                      <tr>
+                        {processingResults.data_preview.columns.map((col: string, idx: number) => (
+                          <th key={idx} className="px-4 py-3 whitespace-nowrap">
+                            {col}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {processingResults.data_preview.data.map((row: any, rowIdx: number) => (
+                        <tr key={rowIdx} className="border-b border-slate-700 hover:bg-slate-700/30">
+                          {processingResults.data_preview.columns.map((col: string, colIdx: number) => (
+                            <td key={colIdx} className="px-4 py-3 text-gray-300 whitespace-nowrap">
+                              {row[col] || '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Export Buttons */}
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Download className="w-5 h-5 text-indigo-400" />
+                Export Results
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  onClick={handleExportCSV}
+                  className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Cleaned CSV
+                </button>
+                <button
+                  onClick={handleExportJSON}
+                  className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download Full JSON
+                </button>
+              </div>
+            </div>
+
+            {/* Advanced Analytics */}
+            {processingResults.advanced_analytics && (
+              <div className="space-y-6">
+
+                {/* Anomalies */}
+                {processingResults.advanced_analytics.anomalies && (
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                      <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                      Data Quality Issues
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-slate-700/50 rounded-lg p-4">
+                        <div className="text-sm text-gray-400 mb-1">Duplicate Rows</div>
+                        <div className="text-2xl font-bold text-white">
+                          {processingResults.advanced_analytics.anomalies.duplicate_rows}
+                        </div>
+                      </div>
+                      <div className="bg-slate-700/50 rounded-lg p-4">
+                        <div className="text-sm text-gray-400 mb-1">Single-Value Columns</div>
+                        <div className="text-2xl font-bold text-white">
+                          {processingResults.advanced_analytics.anomalies.columns_with_single_value.length}
+                        </div>
+                      </div>
+                      <div className="bg-slate-700/50 rounded-lg p-4">
+                        <div className="text-sm text-gray-400 mb-1">High Null Columns</div>
+                        <div className="text-2xl font-bold text-white">
+                          {processingResults.advanced_analytics.anomalies.columns_with_high_null_rate.length}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Trends */}
+                {processingResults.advanced_analytics.trends && Object.keys(processingResults.advanced_analytics.trends).length > 0 && (
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                    <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-green-400" />
+                      Detected Trends
+                    </h3>
+                    <div className="space-y-3">
+                      {Object.entries(processingResults.advanced_analytics.trends).map(([col, trend]: [string, any]) => (
+                        <div key={col} className="bg-slate-700/50 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold text-white">{col}</div>
+                              <div className="text-sm text-gray-400">
+                                {trend.direction === 'increasing' ? '📈' : '📉'} {trend.direction} by {Math.abs(trend.change_percent)}%
+                              </div>
+                            </div>
+                            <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                              trend.direction === 'increasing' 
+                                ? 'bg-green-500/20 text-green-400' 
+                                : 'bg-red-500/20 text-red-400'
+                            }`}>
+                              {trend.change_percent > 0 ? '+' : ''}{trend.change_percent}%
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Outliers */}
+                {processingResults.advanced_analytics.outliers && Object.keys(processingResults.advanced_analytics.outliers).length > 0 && (
+                  <details className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                    <summary className="cursor-pointer text-xl font-semibold text-white">
+                      🔍 Outlier Detection Report
+                    </summary>
+                    <div className="mt-4 space-y-4">
+                      {Object.entries(processingResults.advanced_analytics.outliers).map(([col, data]: [string, any]) => (
+                        <div key={col} className="bg-slate-700/50 rounded-lg p-4">
+                          <div className="font-semibold text-white mb-2">{col}</div>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="text-gray-400">Count:</span>
+                              <span className="text-white ml-2">{data.count}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Percentage:</span>
+                              <span className="text-white ml-2">{data.percentage}%</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Lower Bound:</span>
+                              <span className="text-white ml-2">{data.lower_bound.toFixed(2)}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Upper Bound:</span>
+                              <span className="text-white ml-2">{data.upper_bound.toFixed(2)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                {/* Correlation Matrix */}
+                {processingResults.advanced_analytics.correlation_matrix && (
+                  <details className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
+                    <summary className="cursor-pointer text-xl font-semibold text-white">
+                      📊 Correlation Analysis
+                    </summary>
+                    <div className="mt-4">
+                      {processingResults.advanced_analytics.correlation_matrix.pairs.length > 0 ? (
+                        <div className="space-y-3">
+                          <p className="text-gray-400 text-sm mb-4">Strong correlations found (|r| {'>'} 0.7):</p>
+                          {processingResults.advanced_analytics.correlation_matrix.pairs.map((pair: any, idx: number) => (
+                            <div key={idx} className="bg-slate-700/50 rounded-lg p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="text-white font-semibold">{pair.col1}</span>
+                                  <span className="text-gray-400 mx-2">↔</span>
+                                  <span className="text-white font-semibold">{pair.col2}</span>
+                                </div>
+                                <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                                  pair.correlation > 0 
+                                    ? 'bg-green-500/20 text-green-400' 
+                                    : 'bg-red-500/20 text-red-400'
+                                }`}>
+                                  r = {pair.correlation.toFixed(3)}
+                                </div>
+                              </div>
+                              <div className="text-sm text-gray-400 mt-2">{pair.strength}</div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400">No strong correlations detected</p>
+                      )}
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
+
+            {/* AI Insights Section */}
             {processingResults.insights && (
               <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -267,12 +561,9 @@ function App() {
                 </div>
 
                 <div className="space-y-6">
-                  {/* Parse and display insights in custom format */}
                   {processingResults.insights.split('\n\n').map((section: string, idx: number) => {
-                    // Skip empty sections
                     if (!section.trim()) return null;
 
-                    // Check if it's a header
                     if (section.startsWith('##')) {
                       const title = section.replace(/^##\s*/, '').replace(/\*\*/g, '');
                       return (
@@ -282,7 +573,6 @@ function App() {
                       );
                     }
 
-                    // Check if it's a bold section header
                     if (section.match(/^\*\*\d+\./)) {
                       return (
                         <div key={idx} className="bg-slate-700/50 rounded-lg p-4 border-l-4 border-purple-500">
@@ -296,7 +586,6 @@ function App() {
                       );
                     }
 
-                    // Regular content
                     return (
                       <div key={idx} className="text-gray-300 leading-relaxed pl-4">
                         <ReactMarkdown
@@ -316,7 +605,6 @@ function App() {
                   })}
                 </div>
 
-                {/* Footer Note */}
                 <div className="mt-6 pt-6 border-t border-slate-700">
                   <p className="text-xs text-gray-500 text-center">
                     💡 These insights are AI-generated. Always validate findings with domain expertise.
@@ -342,7 +630,7 @@ function App() {
             )}
 
             {/* Cleaning Report */}
-            {processingResults.cleaning_report && (
+            {processingResults.cleaning_report && processingResults.cleaning_report.operations.length > 0 && (
               <details className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
                 <summary className="cursor-pointer text-xl font-semibold text-white flex items-center gap-2">
                   <AlertCircle className="w-5 h-5 text-blue-400" />
@@ -371,7 +659,6 @@ function App() {
                 </summary>
 
                 <div className="mt-4">
-                  {/* Numeric Stats */}
                   {Object.keys(processingResults.statistics.numeric_stats || {}).length > 0 && (
                     <div className="mb-6">
                       <h4 className="text-lg font-medium text-gray-300 mb-3">Numeric Columns</h4>
@@ -403,7 +690,6 @@ function App() {
                     </div>
                   )}
 
-                  {/* Categorical Stats */}
                   {Object.keys(processingResults.statistics.categorical_stats || {}).length > 0 && (
                     <div>
                       <h4 className="text-lg font-medium text-gray-300 mb-3">Categorical Columns</h4>
@@ -426,7 +712,7 @@ function App() {
               </details>
             )}
 
-            {/* Raw JSON (Collapsible) */}
+            {/* Raw JSON */}
             <details className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
               <summary className="cursor-pointer text-gray-400 hover:text-white font-semibold">
                 📄 View Raw Results (JSON)
@@ -440,7 +726,7 @@ function App() {
           </div>
         )}
 
-        {/* Backend Test Section (Collapsible) */}
+        {/* Backend Test */}
         <details className="bg-slate-800/30 rounded-xl border border-slate-700 p-6 mt-8">
           <summary className="cursor-pointer text-gray-400 hover:text-white font-semibold">
             🔧 Backend Connection Test

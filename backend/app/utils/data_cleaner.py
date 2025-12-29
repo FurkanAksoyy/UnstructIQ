@@ -46,7 +46,7 @@ def clean_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, Dict[str, Any]]:
         numeric_columns = df_cleaned.select_dtypes(include=[np.number]).columns
         for col in numeric_columns:
             if df_cleaned[col].isnull().any():
-                df_cleaned[col].fillna(df_cleaned[col].median(), inplace=True)
+                df_cleaned[col] = df_cleaned[col].fillna(df_cleaned[col].median())
 
         # For categorical columns: fill with mode or 'Unknown'
         categorical_columns = df_cleaned.select_dtypes(include=['object']).columns
@@ -54,9 +54,9 @@ def clean_dataframe(df: pd.DataFrame) -> tuple[pd.DataFrame, Dict[str, Any]]:
             if df_cleaned[col].isnull().any():
                 mode_value = df_cleaned[col].mode()
                 if len(mode_value) > 0:
-                    df_cleaned[col].fillna(mode_value[0], inplace=True)
+                    df_cleaned[col] = df_cleaned[col].fillna(mode_value[0])
                 else:
-                    df_cleaned[col].fillna('Unknown', inplace=True)
+                    df_cleaned[col] = df_cleaned[col].fillna('Unknown')
 
         missing_after = df_cleaned.isnull().sum().sum()
         cleaning_report["operations"].append({

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
 from typing import Optional
 from app.schemas import UploadResponse
 from app.utils.file_handler import generate_job_id, validate_file, save_upload_file
@@ -25,16 +26,10 @@ async def upload_file(
     - **prompt**: Optional processing instructions
     """
     try:
-        # Validate file
         validate_file(file)
-
-        # Generate job ID
         job_id = generate_job_id()
-
-        # Save file
         file_info = await save_upload_file(file, job_id)
 
-        # Save metadata
         metadata = {
             "job_id": job_id,
             "filename": file.filename,
@@ -74,12 +69,10 @@ async def start_processing(job_id: str):
     - **job_id**: Job ID from upload response
     """
     try:
-        # Check if job exists
         job_dir = os.path.join(settings.UPLOAD_DIR, job_id)
         if not os.path.exists(job_dir):
             raise HTTPException(status_code=404, detail="Job not found")
 
-        # Process file
         results = process_file(job_id)
 
         return {
@@ -154,3 +147,52 @@ async def get_results(job_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ==================== EXPORT ENDPOINTS ====================
+
+@router.get("/export/csv/{job_id}")
+async def export_csv(job_id: str):
+    """
+    Download cleaned CSV file
+    """
+    try:
+        processed_dir = os.path.join(settings.PROCESSED_DIR, job_id)
+        csv_path = os.path.join(processed_dir, "cleaned_data.csv")
+
+        if not os.path.exists(csv_path):
+            raise HTTPException(status_code=404, detail="Cleaned CSV not found")
+
+        return FileResponse(
+            path=csv_path,
+            filename=f"cleaned_data_{job_id}.csv",
+            media_type="text/csv"
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/export/json/{job_id}")
+async def export_json(job_id: str):
+    """
+    Download full results JSON
+    """
+    try:
+        processed_dir = os.path.join(settings.PROCESSED_DIR, job_id)
+        results_path = os.path.join(processed_dir, "results.json")
+
+        if not os.path.exists(results_path):
+            raise HTTPException(status_code=404, detail="Results JSON not found")
+
+        return FileResponse(
+            path=results_path,
+            filename=f"results_{job_id}.json",
+            media_type="application/json"
+        )
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

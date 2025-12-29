@@ -1,25 +1,22 @@
 import os
 import json
 from datetime import datetime
-from app.utils.file_parser import parse_file, get_dataframe_info
+from app.utils.file_parser import parse_file, get_dataframe_info, get_data_preview
 from app.utils.data_cleaner import clean_dataframe
 from app.services.chart_service import generate_charts
 from app.services.llm_service import generate_insights
+from app.services.analytics_service import (
+    generate_correlation_matrix,
+    detect_outliers,
+    detect_anomalies,
+    generate_trends
+)
 from app.config import settings
 
 
 def process_file(job_id: str) -> dict:
     """
     Process uploaded file
-
-    Steps:
-    1. Load metadata
-    2. Parse file
-    3. Clean data
-    4. Generate statistics
-    5. Generate charts
-    6. Generate AI insights
-    7. Save processed data
     """
     try:
         # Load metadata
@@ -38,18 +35,27 @@ def process_file(job_id: str) -> dict:
         # Step 1: Parse file
         df = parse_file(file_path)
         original_info = get_dataframe_info(df)
+        data_preview = get_data_preview(df, rows=10)
 
-        # Step 2: Clean data
+        # Step 2: Detect anomalies BEFORE cleaning (important!)
+        anomalies_original = detect_anomalies(df)
+
+        # Step 3: Clean data
         df_cleaned, cleaning_report = clean_dataframe(df)
         cleaned_info = get_dataframe_info(df_cleaned)
 
-        # Step 3: Generate basic statistics
+        # Step 4: Generate basic statistics
         statistics = generate_statistics(df_cleaned)
 
-        # Step 4: Generate charts
-        charts = generate_charts(df_cleaned)
+        # Step 5: Advanced analytics on cleaned data
+        correlation_matrix = generate_correlation_matrix(df_cleaned)
+        outliers = detect_outliers(df_cleaned)
+        trends = generate_trends(df_cleaned)
 
-        # Step 5: Generate AI insights
+        # Step 6: Generate charts
+        charts = generate_charts(df_cleaned, metadata.get("prompt", ""))
+
+        # Step 7: Generate AI insights
         insights = generate_insights(cleaned_info, statistics, cleaning_report)
 
         # Save processed data
@@ -66,8 +72,15 @@ def process_file(job_id: str) -> dict:
             "status": "completed",
             "original_data_info": original_info,
             "cleaned_data_info": cleaned_info,
+            "data_preview": data_preview,
             "cleaning_report": cleaning_report,
             "statistics": statistics,
+            "advanced_analytics": {
+                "correlation_matrix": correlation_matrix,
+                "outliers": outliers,
+                "anomalies": anomalies_original,  # From original data
+                "trends": trends
+            },
             "charts": charts,
             "insights": insights,
             "processed_at": datetime.now().isoformat()
@@ -114,7 +127,8 @@ def generate_statistics(df):
         "total_rows": len(df),
         "total_columns": len(df.columns),
         "numeric_columns": len(df.select_dtypes(include=['number']).columns),
-        "categorical_columns": len(df.select_dtypes(include=['object']).columns)
+        "categorical_columns": len(df.select_dtypes(include=['object']).columns),
+        "datetime_columns": len(df.select_dtypes(include=['datetime64']).columns)
     }
 
     # Numeric columns statistics
@@ -125,7 +139,9 @@ def generate_statistics(df):
             "median": float(df[col].median()),
             "std": float(df[col].std()),
             "min": float(df[col].min()),
-            "max": float(df[col].max())
+            "max": float(df[col].max()),
+            "q25": float(df[col].quantile(0.25)),
+            "q75": float(df[col].quantile(0.75))
         }
 
     # Categorical columns statistics
