@@ -230,40 +230,120 @@ def create_chart_from_suggestion(df: pd.DataFrame, suggestion: dict) -> Dict[str
         elif chart_type == 'line':
             col = columns[0]
 
-            # Check if it's a datetime column
+            # Check if it's a datetime column - TIME SERIES
             if pd.api.types.is_datetime64_any_dtype(df[col]):
-                df_sorted = df.sort_values(col)
-                labels = df_sorted[col].dt.strftime('%Y-%m-%d %H:%M').tolist()[:50]
-                # Count occurrences per timestamp
-                data_values = df_sorted[col].value_counts().sort_index().head(50).values.tolist()
+                # Group by date and count
+                df_sorted = df.copy()
+                df_sorted['date_only'] = df_sorted[col].dt.date
+                daily_counts = df_sorted.groupby('date_only').size().reset_index(name='count')
+                daily_counts = daily_counts.sort_values('date_only')
+
+                # If there's a second column (like channel), break down by that
+                if len(columns) > 1 and columns[1] in df.columns:
+                    col2 = columns[1]
+                    # Multi-line chart by category
+                    df_sorted[col2] = df_sorted[col2].fillna('Unknown')
+                    pivot_data = df_sorted.groupby([df_sorted[col].dt.date, col2]).size().unstack(fill_value=0)
+
+                    datasets = []
+                    colors = [
+                        "rgba(99, 102, 241, 1)",
+                        "rgba(236, 72, 153, 1)",
+                        "rgba(34, 211, 238, 1)",
+                        "rgba(251, 146, 60, 1)",
+                        "rgba(132, 204, 22, 1)"
+                    ]
+
+                    for idx, category in enumerate(pivot_data.columns[:5]):  # Top 5 categories
+                        datasets.append({
+                            "label": str(category),
+                            "data": pivot_data[category].tolist(),
+                            "borderColor": colors[idx % len(colors)],
+                            "backgroundColor": colors[idx % len(colors)].replace('1)', '0.1)'),
+                            "borderWidth": 2,
+                            "fill": False,
+                            "tension": 0.4
+                        })
+
+                    return {
+                        "type": "line",
+                        "title": title,
+                        "description": suggestion.get('description', ''),
+                        "data": {
+                            "labels": [str(d) for d in pivot_data.index.tolist()],
+                            "datasets": datasets
+                        },
+                        "options": {
+                            "responsive": True,
+                            "plugins": {
+                                "legend": {"display": True, "position": "top"},
+                                "title": {"display": True, "text": title}
+                            },
+                            "scales": {
+                                "x": {"title": {"display": True, "text": "Date"}},
+                                "y": {"title": {"display": True, "text": "Count"}, "beginAtZero": True}
+                            }
+                        }
+                    }
+                else:
+                    # Single line - daily counts
+                    return {
+                        "type": "line",
+                        "title": title,
+                        "description": suggestion.get('description', ''),
+                        "data": {
+                            "labels": [str(d) for d in daily_counts['date_only'].tolist()],
+                            "datasets": [{
+                                "label": "Interactions",
+                                "data": daily_counts['count'].tolist(),
+                                "borderColor": "rgba(139, 92, 246, 1)",
+                                "backgroundColor": "rgba(139, 92, 246, 0.1)",
+                                "borderWidth": 2,
+                                "fill": True,
+                                "tension": 0.4
+                            }]
+                        },
+                        "options": {
+                            "responsive": True,
+                            "plugins": {
+                                "legend": {"display": True},
+                                "title": {"display": True, "text": title}
+                            },
+                            "scales": {
+                                "x": {"title": {"display": True, "text": "Date"}},
+                                "y": {"title": {"display": True, "text": "Count"}, "beginAtZero": True}
+                            }
+                        }
+                    }
             else:
+                # Non-datetime line chart
                 labels = [f"Point {i + 1}" for i in range(min(len(df), 50))]
                 data_values = df[col].head(50).tolist()
 
-            return {
-                "type": "line",
-                "title": title,
-                "description": suggestion.get('description', ''),
-                "data": {
-                    "labels": labels,
-                    "datasets": [{
-                        "label": col,
-                        "data": data_values,
-                        "borderColor": "rgba(139, 92, 246, 1)",
-                        "backgroundColor": "rgba(139, 92, 246, 0.1)",
-                        "borderWidth": 2,
-                        "fill": True,
-                        "tension": 0.4
-                    }]
-                },
-                "options": {
-                    "responsive": True,
-                    "plugins": {
-                        "legend": {"display": True},
-                        "title": {"display": True, "text": title}
+                return {
+                    "type": "line",
+                    "title": title,
+                    "description": suggestion.get('description', ''),
+                    "data": {
+                        "labels": labels,
+                        "datasets": [{
+                            "label": col,
+                            "data": data_values,
+                            "borderColor": "rgba(139, 92, 246, 1)",
+                            "backgroundColor": "rgba(139, 92, 246, 0.1)",
+                            "borderWidth": 2,
+                            "fill": True,
+                            "tension": 0.4
+                        }]
+                    },
+                    "options": {
+                        "responsive": True,
+                        "plugins": {
+                            "legend": {"display": True},
+                            "title": {"display": True, "text": title}
+                        }
                     }
                 }
-            }
 
         elif chart_type == 'scatter' and len(columns) >= 2:
             col1, col2 = columns[0], columns[1]
