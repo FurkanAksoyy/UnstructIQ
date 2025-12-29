@@ -24,6 +24,24 @@ export const api = {
     });
     return response.data;
   },
+
+  // YENİ: Start processing
+  processFile: async (jobId) => {
+    const response = await axios.post(`${API_BASE_URL}/api/process/${jobId}`);
+    return response.data;
+  },
+
+  // YENİ: Get status
+  getStatus: async (jobId) => {
+    const response = await axios.get(`${API_BASE_URL}/api/status/${jobId}`);
+    return response.data;
+  },
+
+  // YENİ: Get results
+  getResults: async (jobId) => {
+    const response = await axios.get(`${API_BASE_URL}/api/results/${jobId}`);
+    return response.data;
+  },
 };
 
 export default axios.create({
