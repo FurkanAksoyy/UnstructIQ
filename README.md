@@ -24,7 +24,7 @@ Transform unstructured data into actionable insights with intelligent automation
 - **Export Options**: Download cleaned CSV and full results JSON
 
 ### 🤖 AI Integration
-- **Gemini 2.0 Flash**: Powers intelligent chart selection and insight generation
+- **Gemini 3 Pro**: Powers intelligent chart selection and insight generation
 - **Smart Chart Types**: Line (time-series), Bar, Pie, Scatter based on data characteristics
 - **Context-Aware**: Respects user prompts for focused analysis
 
